@@ -4,7 +4,6 @@ use std::ops::{Add, Index, Mul, Sub};
 
 pub trait OneStep<Sys: HybridSystem> {
     fn step(&self, system: &Sys, t: f64, h: f64) -> (Sys::State, f64);
-    fn hnom(&self) -> f64;
     fn hmin(&self) -> f64;
     fn hmax(&self) -> f64;
 }
@@ -24,7 +23,6 @@ where
 }
 
 pub struct RungeKutta {
-    hnom: f64,
     hmin: f64,
     hmax: f64,
 }
@@ -40,10 +38,6 @@ impl<Sys: HybridSystem> OneStep<Sys> for RungeKutta {
         (x0.clone() + (k1 + k2 * 2.0 + k3 * 2.0 + k4) * (h / 6.0), h)
     }
 
-    fn hnom(&self) -> f64 {
-        self.hnom
-    }
-
     fn hmin(&self) -> f64 {
         self.hmin
     }
@@ -54,7 +48,6 @@ impl<Sys: HybridSystem> OneStep<Sys> for RungeKutta {
 }
 
 pub struct Euler {
-    hnom: f64,
     hmin: f64,
     hmax: f64,
 }
@@ -78,10 +71,6 @@ impl<Sys: HybridSystem> OneStep<Sys> for Euler {
         (x1_d, h)
     }
 
-    fn hnom(&self) -> f64 {
-        self.hnom
-    }
-
     fn hmin(&self) -> f64 {
         self.hmin
     }
@@ -93,7 +82,6 @@ impl<Sys: HybridSystem> OneStep<Sys> for Euler {
 
 pub struct Ode23 {
     pub hmin: f64,
-    pub hnom: f64,
     pub hmax: f64,
     pub reltol: f64,
     pub abstol: f64,
@@ -131,10 +119,6 @@ impl<Sys: HybridSystem> OneStep<Sys> for Ode23 {
                 return (x1, self.hmin);
             }
         }
-    }
-
-    fn hnom(&self) -> f64 {
-        self.hnom
     }
 
     fn hmin(&self) -> f64 {
@@ -183,7 +167,7 @@ pub fn simulate_to_transition<Sys: HybridSystem, Stepper: OneStep<Sys>>(
 ) -> f64 {
     let mut t = sys.time();
     sys.start(t, sys.state().clone());
-    let mut h = stepper.hnom();
+    let mut h = stepper.hmin();
     loop {
         let (newx, hnew) = stepper.step(sys, t, h);
         let sys_change = sys.detect(t + h, &newx);
